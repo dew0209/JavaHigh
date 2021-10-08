@@ -188,3 +188,198 @@ person   Person{name='null', age=null}
 
 
 
+## Scope
+
+```xml
+IOC容器：多实例bean，在使用的时候才会创建这个bean
+				单实例bean，创建IOC容器的时候，这个bean就被创建
+```
+
+```java
+/**
+ * prototype:多实例 IOC容器启动的时候，不会去调用方法创建对象，而是每次获取的时候才会调用方法创建对象
+ * singleton：单实例，默认的 IOC容器启动的时候会调用方法创建对象并放到IOC容器中，以后每次获取就是直接从容器中拿的同一个对象
+ * request：主要针对web应用，递交一次请求，创建一次实例
+ * session：同一个session，创建一个实例
+ * @return
+ */
+@Bean
+@Scope(value = "prototype")
+public Person person1(){
+    return new Person();
+}
+```
+
+
+
+## Lazy
+
+```xml
+什么是懒加载
+	针对单实例bean，容器启动时候不创建对象，仅当第一次使用(获取)bean的时候才创建被初始化
+```
+
+```java
+@Bean
+@Lazy
+public Person person2(){
+    return new Person();
+}
+```
+
+
+
+## Conditional
+
+条件注册bean
+
+```java
+@Conditional(WinConditional.class)
+@Bean("lison")
+public Person lison(){
+    System.out.println("给容器中添加lison...");
+    return new Person("lison",58);
+}
+@Conditional(LinConditional.class)
+@Bean("james")
+public Person james(){
+    System.out.println("给容器中添加james...");
+    return new Person("james",20);
+}
+```
+
+```java
+/**
+ * 运行操作系统的时候，如果windows--->lison
+ *                     linux--->james
+ * @Conditional
+ *
+ *
+ * FactoryBean：把Java实例通过FactoryBean注入到容器中
+ * BeanFactory：从我们的容器中获取实例化后的bean
+ */
+@Test
+public void test05(){
+    AnnotationConfigApplicationContext app = new AnnotationConfigApplicationContext(Confg.class);
+    System.out.println("IOC容器创建完成");
+}
+```
+
+```java
+package spring.baseanno.filter;
+
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+
+public class WinConditional implements Condition {
+
+    /**
+     *
+     * @param conditionContext 判断条件能够使用的上下文环境
+     * @param annotatedTypeMetadata 注解的信息
+     * @return
+     */
+    @Override
+    public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
+        //TODO 是否为windows系统
+        //获取到IOC容器正在使用的beanFactory
+        ConfigurableListableBeanFactory factory = conditionContext.getBeanFactory();
+        //获取当前环境变量
+        Environment environment = conditionContext.getEnvironment();
+        String os = environment.getProperty("os.name");
+        if(os.contains("Windows"))return true;
+        return false;
+    }
+}
+```
+
+```java
+package spring.baseanno.filter;
+
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+
+public class LinConditional implements Condition {
+
+    /**
+     *
+     * @param conditionContext 判断条件能够使用的上下文环境
+     * @param annotatedTypeMetadata 注解的信息
+     * @return
+     */
+    @Override
+    public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
+        //TODO 是否为Linux系统
+        //获取到IOC容器正在使用的beanFactory
+        ConfigurableListableBeanFactory factory = conditionContext.getBeanFactory();
+        //获取当前环境变量
+        Environment environment = conditionContext.getEnvironment();
+        String os = environment.getProperty("os.name");
+        if(os.contains("linux"))return true;
+        return false;
+    }
+}
+```
+
+
+
+## Import
+
+```
+@Import：快速给容器导入一个组件，注意：@Bean有点简单
+  a.@Import(要导入到容器中的组件)：容器会自动注册这个组件，bean的id为全限定类名
+  b.ImportSelector：是一个接口，返回需要导入到容器的组件的全类名数组
+  c.ImportBeanDefinitionRegistrar 可以手动添加组件到IOC容器，所有的Bean的注册可以使用BeanDefinitionRegistry
+  	参考MyImportBeanDefinitionRegistrar类
+```
+
+
+
+## FactoryBean
+
+使用FactoryBean进行对象的注册
+
+```java
+package spring.baseanno.FactoryBean;
+
+import org.springframework.beans.factory.FactoryBean;
+import spring.baseanno.bean.Mokey;
+
+/**
+ * 这种思想是mybatis整合spring的实现方式，因为mapper接口动态代理对象不是线程安全的，所以每次拿都是新的对象
+ */
+public class MyFactoryBean implements FactoryBean<Mokey> {
+    @Override
+    public Mokey getObject() throws Exception {
+        return new Mokey();
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return Mokey.class;
+    }
+
+    /**
+     * 是否单实例
+     * @return true 是单例模式，false 多例模式
+     */
+    @Override
+    public boolean isSingleton() {
+        return true;
+    }
+}
+```
+
+```java
+@Bean
+public MyFactoryBean myFactoryBean(){
+    return new MyFactoryBean();
+}
+```
+

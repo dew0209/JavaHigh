@@ -5,6 +5,7 @@ public class Person {
     private Integer age;
 
     public Person() {
+        System.out.println("被加载~~~");
     }
 
     public Person(String name, Integer age) {
