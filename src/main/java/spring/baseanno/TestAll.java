@@ -72,6 +72,28 @@ public class TestAll {
         System.out.println("======");
         Mokey bean1 = (Mokey)app.getBean("myFactoryBean");
         Mokey bean2 = (Mokey)app.getBean("myFactoryBean");
+
         System.out.println(bean1 == bean2);
+        Object bean = app.getBean("&myFactoryBean");
+        System.out.println(bean);//spring.baseanno.FactoryBean.MyFactoryBean@2d7275fc  加了&就会直接获取bean工厂对象
+    }
+
+    /**
+     * bean的生命周期
+     */
+    @Test
+    public void test07(){
+        AnnotationConfigApplicationContext app = new AnnotationConfigApplicationContext(Confg.class);
+        System.out.println("IOC容器创建完成");
+//        System.out.println("华丽的分割线");
+//        Object bike = app.getBean("bike");
+//        System.out.println(bike);
+//        app.close();
+//        app.getBean("train");
+//        app.close();
+//        app.getBean("jeep");
+//
+//        app.close();
+        app.getBean("bike");
     }
 }

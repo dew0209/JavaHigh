@@ -4,9 +4,11 @@ import org.hamcrest.Factory;
 import org.junit.Test;
 import org.springframework.context.annotation.*;
 import org.springframework.context.annotation.ComponentScan.Filter;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import spring.baseanno.FactoryBean.MyFactoryBean;
 import spring.baseanno.ImportBeanDefinitionRegistrar.MyImportBeanDefinitionRegistrar;
+import spring.baseanno.bean.Bike;
 import spring.baseanno.bean.Cat;
 import spring.baseanno.bean.Dog;
 import spring.baseanno.controller.OrderController;
@@ -23,6 +25,9 @@ import spring.quickstart.pojo.Person;
         },useDefaultFilters = false),
         @ComponentScan(value = "spring.baseanno",includeFilters = {
                 @Filter(type = FilterType.ANNOTATION,classes = {Controller.class})
+        },useDefaultFilters = false),
+        @ComponentScan(value = "spring.baseanno",includeFilters = {
+                @Filter(type = FilterType.ANNOTATION,classes = {Component.class})
         },useDefaultFilters = false)
 })
 @Import({Dog.class, Cat.class, MyImportSelector.class, MyImportBeanDefinitionRegistrar.class})
@@ -84,13 +89,18 @@ public class Confg {
      * 4.使用FactoryBean进行对象的注册：
      * @return
      */
+    @Bean(initMethod = "init",destroyMethod = "destroy")
+    //@Scope("prototype")
+    public Bike bike(){
+        return new Bike();
+    }
     @Bean("person")
     public Person person3(){
         System.out.println("给容器中添加person");
         return new Person("person",20);
-    }
+    }/*
     @Bean
     public MyFactoryBean myFactoryBean(){
         return new MyFactoryBean();
-    }
+    }*/
 }

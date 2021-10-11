@@ -383,3 +383,153 @@ public MyFactoryBean myFactoryBean(){
 }
 ```
 
+ 
+
+## Bean的生命周期1
+
+```xml
+Bean的生命周期指Bean的创建->初始化->销毁
+我们可以自定义Bean初始化和销毁方法
+容器在bean进行到当前生命周期的时候，来调用自定义的初始化和销毁方法
+```
+
+单实例
+
+```java
+package spring.baseanno.bean;
+
+
+public class Bike {
+    //构造方法
+    public Bike() {
+        System.out.println("Bike constructor");
+    }
+    //初始化方法
+    public void init(){
+        System.out.println("Bike init");
+    }
+    //销毁方法
+    public void destroy(){
+        System.out.println("Bike destroy");
+    }
+}
+```
+
+```java
+@Bean(initMethod = "init",destroyMethod = "destroy")
+public Bike bike(){
+    return new Bike();
+}
+```
+
+多实例bean在调用的时候创建，销毁不由IOC容器负责
+
+## Bean的生命周期2
+
+```xml
+实现InitializingBean接口的afterPropertiesSet方法，当创建对象，且把bean所有的属性设置好之后，会调用这个方法，相当于初始化方法
+实现DisposableBean接口的destroy方法，当bean销毁时，会把单实例bean进行销毁
+```
+
+```java
+package spring.baseanno.bean;
+
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+@Component("train")
+//@Scope("prototype")
+public class Train implements InitializingBean, DisposableBean {
+
+    public Train(){
+        System.out.println("Train构造函数");
+    }
+    //this is destroy of this bean
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("Train销毁");
+    }
+    //this is init of this bean
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("Train初始化");
+    }
+}
+```
+
+## Bean的生命周期3
+
+可以使用JSR250规范定义的(Java规范）两个注解来实现
+
+```xml
+@PostConstruct：在Bean创建完成，且属于赋值完成后进行初始化，属于jdk规范的注解
+@PreDestroy：在Bean被移除之前进行通知，在容器销毁之前进行清理工作
+```
+
+## Bean的生命周期4
+
+```xml
+bean的后置处理器，在bean初始化之前调用进行拦截，在bean初始化之前后进行一些处理工作，使用BeanPostProcessors控制Bean的生命周期，紧跟初始化，看原理的代码
+实现BeanPostProcessors接口即可
+对所有的bean都其作用
+在init前后进行拦截
+postProcessBeforeInitialization：bike , spring.baseanno.bean.Bike@4fb0f2b9
+Bike init
+postProcessAfterInitialization：bike , spring.baseanno.bean.Bike@4fb0f2b9
+```
+
+原理：
+
+```java
+if (mbd == null || !mbd.isSynthetic()) {
+    wrappedBean = this.applyBeanPostProcessorsBeforeInitialization(bean, beanName);
+}
+
+try {
+    this.invokeInitMethods(beanName, wrappedBean, mbd);//初始化之后
+} catch (Throwable var6) {
+    throw new BeanCreationException(mbd != null ? mbd.getResourceDescription() : null, beanName, "Invocation of init method failed", var6);
+}
+
+if (mbd == null || !mbd.isSynthetic()) {
+    wrappedBean = this.applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+}
+```
+
+### BeanPostProcessors调试
+
+- ```java
+  AnnotationConfigApplicationContext-->AnnotationConfigApplicationContext(Class<?>... annotatedClasses)
+  ```
+
+- ```java
+  AbstractApplicationContext-->refresh()
+  ```
+
+- ```java
+  DefaultListableBeanFactory-->finishBeanFactoryInitialization()
+  ```
+
+- ```java
+  AbstractBeanFactory-->getBean(String name)
+  ```
+
+- ```java
+  AbstractBeanFactory-->doGetBean(String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
+  ```
+
+- ```java
+  AbstractAutowireCapableBeanFactory-->createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+  ```
+
+- ```java
+  AbstractAutowireCapableBeanFactory-->doCreateBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+  ```
+
+- ```java
+  AbstractAutowireCapableBeanFactory-->initializeBean(String beanName, Object bean, @Nullable RootBeanDefinition mbd) 在调用这个方法的前后进行了BeanPostProcessors的增强
+  ```
+
+  
