@@ -1,4 +1,4 @@
-# Spring
+# 组件注册
 
 ```xml
 Spring 是一种开源轻量级框架，是为了解决企业应用程序开发复杂性而创建的
@@ -532,4 +532,215 @@ if (mbd == null || !mbd.isSynthetic()) {
   AbstractAutowireCapableBeanFactory-->initializeBean(String beanName, Object bean, @Nullable RootBeanDefinition mbd) 在调用这个方法的前后进行了BeanPostProcessors的增强
   ```
 
-  
+### ApplicationContextAwareProcessor Aware接口的使用
+
+```java
+package spring.baseanno.bean;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Plane implements ApplicationContextAware {
+    ApplicationContext applicationContext;
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        //将ApplicationContext传进来
+        this.applicationContext = applicationContext;
+    }
+}
+```
+
+就是在
+
+```java
+applyBeanPostProcessorsBeforeInitialization(Object existingBean, String beanName)-->invokeAwareInterfaces(bean);
+```
+
+做了相应的处理
+
+```xml
+总结：Spring底层对BeanPostProcessor的使用，包括bean的赋值，注入其它组件，生命周期注解等功能。
+```
+
+# 组件赋值
+
+## Value
+
+```xml
+1.使用bean.xml配置文件进行赋值
+2.使用@Value赋值，基本字符
+3.使用@Value从*.properties取值
+```
+
+```java
+package spring.baseanno1.bean;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component("bird")
+public class Bird {
+    /**
+     * 可以使用@Value进行赋值，1：基本字符。2：Spring el表达式。3：
+     */
+    @Value("james")//使用基本字符
+    private String name;
+    @Value("#{20-2}")//使用el
+    private Integer age;
+
+    @Value("${bird.color}")
+    private String color;
+
+    public Bird(){
+
+    }
+    public Bird(String name, Integer age,String color) {
+        this.name = name;
+        this.age = age;
+        this.color = color;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    @Override
+    public String toString() {
+        return "Bird{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", color='" + color + '\'' +
+                '}';
+    }
+}
+```
+
+```java
+package spring.baseanno1;
+
+import org.junit.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import spring.baseanno1.bean.Bird;
+import spring.baseanno1.confg.Confg;
+
+public class TestAll {
+    @Test
+    public void test01(){
+        AnnotationConfigApplicationContext app = new AnnotationConfigApplicationContext(Confg.class);
+        System.out.println("容器已经创建完成");
+        Bird bird = (Bird)app.getBean("bird");
+        System.out.println(bird);
+        System.out.println("分割线");
+        String[] names = app.getBeanDefinitionNames();
+        for (String name : names) {
+            System.out.println(name + "---" + app.getBean(name));
+
+        }
+        ConfigurableEnvironment en = app.getEnvironment();
+        System.out.println("en === " + en.getProperty("bird.color"));
+    }
+}
+```
+
+## Autowired Qualifier Primary
+
+```xml
+什么是自动装配：
+	spring利用依赖注入（DI），完成对IOC容器中的各个组件的依赖关系赋值
+思考：
+	如果容器中存在两个id相同的bean，会加载哪个bean呢?报错
+	如何指定装配组件ID进行加载?
+	容器加载不存在的bean会出现什么问题?
+	@Primary注解bean首选如何使用?
+	@Autowired @Resource @Inject区别?
+```
+
+```java
+package spring.baseanno1.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import spring.baseanno1.dao.TestDao;
+
+@Service
+public class TestService {
+
+
+
+    @Autowired
+    @Qualifier("testDao2")//利用这个在多个类型一样的bean的时候，去按名字找
+    private TestDao testDao;
+
+    public void testDao(){
+        System.out.println(testDao);
+    }
+}
+```
+
+```java
+package spring.baseanno1.confg;
+
+import org.springframework.context.annotation.*;
+import org.springframework.stereotype.Component;
+import spring.baseanno1.dao.TestDao;
+import thread.ext.aqs.conditionex.Test;
+
+
+@Configuration
+@ComponentScans({
+        @ComponentScan(value = "spring.baseanno1")
+})
+@PropertySource(value = "classpath:/bird.properties")
+@Component
+public class Confg {
+
+    //两个id一样的话，@Bean更占优势
+    @Bean("testDao")
+    public TestDao testDao(){
+        TestDao testDao = new TestDao();
+        testDao.setFlag("2");
+        return testDao;
+    }
+
+}
+```
+
+```xml
+Resource效果是一样的
+```
+
+```xml
+@Primary首选项，会优先加载这个。类型首选[有多个相同类型存在时候]
+```
+
+```xml
+多个类型，单纯用Autowired，报错，可以通过Primary进行配置，或者使用Qualifier进行配置
+```
+
+
+

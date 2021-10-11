@@ -96,4 +96,10 @@ public class TestAll {
 //        app.close();
         app.getBean("bike");
     }
+
+    @Test
+    public void test08(){
+        AnnotationConfigApplicationContext app = new AnnotationConfigApplicationContext(Confg.class);
+        System.out.println("IOC容器创建完成");
+    }
 }
