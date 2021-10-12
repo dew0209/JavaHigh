@@ -20,7 +20,7 @@ public class ConnectionLogger extends BaseJdbcLogger implements InvocationHandle
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        //对连结的增加，进行日志打印
+        //对连接的增强，进行日志打印
         if ("prepareStatement".equals(method.getName())){
             PreparedStatement stmt = (PreparedStatement)method.invoke(connection,args);
             stmt = PreparedStatementLogger.neeInstance(stmt,statementLog);//创建代理对象

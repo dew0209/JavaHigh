@@ -16,7 +16,7 @@ public class Confg {
 
     //两个id一样的话，@Bean更占优势
 
-    @Primary
+    //@Primary
     @Bean("testDao2")
     public TestDao testDao(){
         TestDao testDao = new TestDao();

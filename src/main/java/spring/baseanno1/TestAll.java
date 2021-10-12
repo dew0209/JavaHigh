@@ -4,6 +4,8 @@ import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import spring.baseanno1.bean.Bird;
+import spring.baseanno1.bean.Moon;
+import spring.baseanno1.bean.Sun;
 import spring.baseanno1.confg.Confg;
 import spring.baseanno1.dao.TestDao;
 import spring.baseanno1.service.TestService;
@@ -19,7 +21,6 @@ public class TestAll {
         String[] names = app.getBeanDefinitionNames();
         for (String name : names) {
             System.out.println(name + "---" + app.getBean(name));
-
         }
         ConfigurableEnvironment en = app.getEnvironment();
         System.out.println("en === " + en.getProperty("bird.color"));
@@ -37,6 +38,20 @@ public class TestAll {
         TestDao bean = (TestDao) app.getBean("testDao2");
         System.out.println(bean);
 
+    }
 
+    @Test
+    public void test03(){
+        AnnotationConfigApplicationContext app = new AnnotationConfigApplicationContext(Confg.class);
+        Moon bean = app.getBean(Moon.class);
+        System.out.println(bean);
+        Sun bean1 = app.getBean(Sun.class);
+        System.out.println(bean1.getMoon());
+        System.out.println("===");
+        String[] anmes = app.getBeanDefinitionNames();
+        for (String anme : anmes) {
+            System.out.println(anme + " ---> " + app.getBean(anme));
+        }
+        app.close();
     }
 }

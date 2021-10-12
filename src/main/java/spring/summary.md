@@ -742,5 +742,194 @@ Resource效果是一样的
 多个类型，单纯用Autowired，报错，可以通过Primary进行配置，或者使用Qualifier进行配置
 ```
 
+## Aware注入Spring组件原理
 
+```xml
+自定义组件想要使用Spring容器底层的组件(ApplicationContext,BeanFactory,...)
+自定义组件实现xxxAware，在创建对象的时候，会调用接口规定的方法注入到相关组件
+```
+
+## 常见的xxxAware接口
+
+```xml
+ApplicationContextAware接口：获取IOC容器
+BeanNameAware：获取Bean信息
+EmbeddedValueResolverAware接口：解析器（表达式及相关脚本解析）
+```
+
+# AOP
+
+
+
+```java
+package spring.aopcs.aop;
+
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.Arrays;
+
+/**
+ * 日志切面类的方法需要动态感知到div方法运行
+ *  通知方法：
+ *      前置通知：logStart():在我们执行div()除法之前运行 @Before
+ *      后置通知：logEnd():在目标方法div()运行结束之后，不管有没有异常 @After
+ *      返回通知：logReturn():在我们的目标方法div()正常返回值后运行 @AfterReturn
+ *      异常通知：longException()：在我们的目标方法div()出现异常后运行 @AfterThrowing
+ *      环绕通知：动态代理，需要手动执行joinPoint.procced() @Round
+ */
+@Aspect
+public class LogAspects {
+
+    @Pointcut("execution(public int spring.aopcs.aop.Calculator.div(int,int))")
+    public void pointCut(){}
+
+
+    //前置通知
+    /*
+    可以使用通配符
+     */
+    //JoinPoint可以获取一些有关方法的信息，不能使用ProceedingJoinPoint
+    @Before("pointCut()")
+    public void logStart(JoinPoint joinPoint){
+        System.out.println("除法运行...参数列表是：{}");
+        Object[] args = joinPoint.getArgs();
+        System.out.println(Arrays.toString(args));
+        System.out.println("111");
+    }
+    //后置通知
+    @After("pointCut()")
+    public void logEnd(){
+        System.out.println("除法结束...参数列表是：{}");
+    }
+    //返回通知
+    @AfterReturning(value = "pointCut()",returning = "result")
+    public void logReturn(int result){
+        System.out.println("除法正常返回...参数列表是：{}" + result);
+    }
+    //异常通知
+    @AfterThrowing(value = "pointCut()",throwing = "exception")
+    public void logException(Exception exception){
+        System.out.println("除法异常...参数列表是：{}+++++++++++++++++++");
+        System.out.println(exception);
+    }
+    @Around("pointCut()")
+    public Object around(ProceedingJoinPoint joinPoint){
+        System.out.println("环绕之前");
+        Object ret = null;
+        try {
+
+            ret = joinPoint.proceed();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+        System.out.println("环绕之后");
+        return ret;
+    }
+}
+```
+
+```java
+package spring.aopcs.confg;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import spring.aopcs.aop.Calculator;
+import spring.aopcs.aop.LogAspects;
+
+@Configuration
+@EnableAspectJAutoProxy//this is must
+public class Confg {
+    @Bean("calculator")
+    public Calculator calculator(){
+        return new Calculator();
+    }
+
+    @Bean
+    public LogAspects logAspects(){
+        return new LogAspects();
+    }
+}
+```
+
+# AOP源码
+
+JDK代理：InvocationHandler，Proxy，反射  ==实现接口==
+
+CGLB：继承要被动态代理的类  ==继承==
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(AspectJAutoProxyRegistrar.class)
+public @interface EnableAspectJAutoProxy {
+  //动态代理采用的方式
+  boolean proxyTargetClass() default false;
+  //暴露代理对象
+  boolean exposeProxy() default false;
+}
+```
+
+```java
+AnnotationAwareAspectJAutoProxyCreator.class + org.springframework.aop.config.internalAutoProxyCreator 注入到IOC通过ImportBeanDefinitionRegistrar的方式进行注册
+  
+AnnotationAwareAspectJAutoProxyCreator的父类
+  AnnotationAwareAspectJAutoProxyCreator
+  	AbstractAdvisorAutoProxyCreator
+  		AbstractAutoProxyCreator
+  			ProxyProcessorSupport(Ordered接口)
+  			SmartInstantiationAwareBeanPostProcessor
+  			BeanFactoryAware：能把我们的beanfactory传进来
+InstantiationAwareBeanPostProcessor在我们的bean初始化完成前后要做的事情，自动装配BeanFactory
+
+  
+明确目标：拦截
+需要做的：createBean()
+  
+关注AnnotationAwareAspectJAutoProxyCreator的父类怎么创建
+internalAutoProxyCreator == AnnotationAwareAspectJAutoProxyCreator
+  
+  
+// Register bean processors that intercept bean creation.
+registerBeanPostProcessors(beanFactory);
+在这里面创建的
+  
+最后利用
+return BeanUtils.instantiateClass(constructorToUse, new Object[0]);
+进行创建
+```
+
+# 声明式事务
+
+```xml
+以方法为单位，进行事物控制，抛出异常，事物回滚
+最小执行单位为方法。决定执行成败是通过抛出异常来判断的，抛出异常即执行失败
+
+
+InfrastructureAdvisorAutoProxyCreator
+注册
+利用后置处理器机制在创建以后，包装对象，返回一个代理对象（增强），代理对象执行方法时，利用拦截器进行调用
+
+AnnotationTransactionAttributeSource
+事物增强器要用事务注解的信息，使用这个类解析事务注解
+
+
+TransactionInterceptor
+保存事务属性信息，事务管理器 MethodInterceptor
+当执行目标方法时：
+	执行拦截器
+	事务拦截器
+	1.先获取事务相关属性
+	2.拿到事务管理器，到容器中获取，final PlatformTransactionManager tm = determineTransactionManager(txAttr);
+	2.执行目标方法retVal = invocation.proceedWithInvocation();
+		有异常：completeTransactionAfterThrowing(txInfo, ex);回滚在这个方法里面
+		正常：利用事务管理器，提交
+TransactionAspectSupport进行拦截
+completeTransactionAfterThrowing(@Nullable TransactionAspectSupport.TransactionInfo txInfo, Throwable ex) 进行回滚
+```
 
